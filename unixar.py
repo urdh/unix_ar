@@ -5,6 +5,9 @@ import struct
 _open = open
 
 
+CHUNKSIZE = 4096
+
+
 class ArInfo(object):
     def __init__(self, name, size=None,
                  mtime=None, perms=None, uid=None, gid=None):
@@ -35,15 +38,74 @@ class ArInfo(object):
             raise ValueError("Invalid file signature")
         return cls(name, size, mtime, perms, uid, gid)
 
+    def tobuffer(self):
+        if any(f is None for f in (self.name, self.mtime,
+                                   self.uid, self.gid, self.perms, self.size)):
+            raise ValueError("ArInfo object has None fields")
+        return (
+            '{: <16}{: <12}{: <6}{: <6}{: <8o}{: <10}\x60\n'.format(
+                self.name,
+                self.mtime, self.uid, self.gid, self.perms, self.size)
+                .encode('ascii'))
+
+    def updatefromdisk(self, path=None):
+        attrs = (
+            self.name, self.size, self.mtime, self.perms, self.uid, self.gid)
+        if not any(a is None for a in attrs):
+            return self.__class__(*attrs)
+
+        name, size, mtime, perms, uid, gid = attrs
+        if path is None:
+            path = name
+        stat = os.stat(path)
+        if name is None:
+            name = path
+        if size is None:
+            size = stat.st_size
+        if mtime is None:
+            mtime = int(stat.st_mtime)
+        if perms is None:
+            perms = stat.st_mode
+        if uid is None:
+            uid = stat.st_uid
+        if gid is None:
+            gid = stat.st_gid
+        return self.__class__(name, size, mtime, perms, uid, gid)
+
 
 class ArFile(object):
     def __init__(self, file, mode):
         self._file = file
         self._mode = mode
-        if mode not in ('r', 'w'):
+        if mode == 'r':
+            self._read_entries()
+        elif mode == 'w':
+            self._file.write(b'!<arch>\n')
+        else:
             raise ValueError("mode must be one of 'r' or 'w'")
 
-        TODO
+    def _read_entries(self):
+        if self._file.read(8) != b'!<arch>\n':
+            raise ValueError("Invalid archive signature")
+
+        self._entries = []
+        self._name_map = {}
+        pos = 8
+        while True:
+            buffer = self._file.read(60)
+            if len(buffer) == 0:
+                break
+            elif len(buffer) == 60:
+                entry = ArInfo.frombuffer(buffer)
+                self._name_map[entry.name] = len(self._entries)
+                self._entries.append(entry)
+                skip = entry.size
+                if skip % 2 != 0:
+                    skip += 1
+                pos += 60 + skip
+                if pos == self._file.seek(skip, 1):
+                    continue
+            raise ValueError("Truncated archive?")
 
     def _check(self, expected_mode):
         if self._file is None:
@@ -57,11 +119,37 @@ class ArFile(object):
 
     def add(self, name, arcname=None):
         self._check('w')
-        TODO
+        if arcname is None:
+            arcname = ArInfo(name)
+        elif not isinstance(arcname, ArInfo):
+            arcname = ArInfo(arcname)
+        arcname = arcname.updatefromdisk(name)
+        with _open(name, 'rb') as fp:
+            self.addfile(arcname, fp)
 
     def addfile(self, name, fileobj=None):
         self._check('w')
-        TODO
+        if not isinstance(name, ArInfo):
+            name = ArInfo(name)
+
+        name = name.updatefromdisk()
+
+        self._file.write(name.tobuffer())
+        if fileobj is None:
+            fp = _open(name.name, 'rb')
+        else:
+            fp = fileobj
+
+        for pos in range(0, name.size, CHUNKSIZE):
+            chunk = fp.read(min(CHUNKSIZE, name.size - pos))
+            if len(chunk) != CHUNKSIZE and len(chunk) != name.size - pos:
+                raise RuntimeError("File changed size?")
+            self._file.write(chunk)
+        if name.size % 2 == 1:
+            self._file.write(b'\n')
+
+        if fileobj is None:
+            fp.close()
 
     def infolist(self):
         self._check('r')
