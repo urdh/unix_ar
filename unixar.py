@@ -17,6 +17,7 @@ class ArInfo(object):
         self.perms = perms
         self.uid = uid
         self.gid = gid
+        self.offset = None
 
     @classmethod
     def frombuffer(cls, buffer):
@@ -72,6 +73,12 @@ class ArInfo(object):
             gid = stat.st_gid
         return self.__class__(name, size, mtime, perms, uid, gid)
 
+    def __copy__(self):
+        member = self.__class__(
+            self.name, self.size, self.mtime, self.perms, self.uid, self.gid)
+        member.offset = self.offset
+        return member
+
 
 class ArFile(object):
     def __init__(self, file, mode):
@@ -96,10 +103,11 @@ class ArFile(object):
             if len(buffer) == 0:
                 break
             elif len(buffer) == 60:
-                entry = ArInfo.frombuffer(buffer)
-                self._name_map[entry.name] = len(self._entries)
-                self._entries.append(entry)
-                skip = entry.size
+                member = ArInfo.frombuffer(buffer)
+                member.offset = pos
+                self._name_map[member.name] = len(self._entries)
+                self._entries.append(member)
+                skip = member.size
                 if skip % 2 != 0:
                     skip += 1
                 pos += 60 + skip
