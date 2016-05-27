@@ -8,6 +8,13 @@ _open = open
 CHUNKSIZE = 4096
 
 
+def utf8(s):
+    if isinstance(s, bytes):
+        return s
+    else:
+        return s.encode('utf-8')
+
+
 class ArInfo(object):
     def __init__(self, name, size=None,
                  mtime=None, perms=None, uid=None, gid=None):
@@ -18,6 +25,11 @@ class ArInfo(object):
         self.uid = uid
         self.gid = gid
         self.offset = None
+
+    def _name_set(self, value):
+        self._name = utf8(value)
+
+    name = property(lambda self: self._name, _name_set)
 
     @classmethod
     def frombuffer(cls, buffer):
@@ -30,7 +42,7 @@ class ArInfo(object):
         # 58  2   File magic                      0x60 0x0A
         name, mtime, uid, gid, perms, size, magic = (
             struct.unpack('16s12s6s6s8s10s2s', buffer))
-        name = name.rstrip(b' ')
+        name = utf8(name).rstrip(b' ')
         mtime = int(mtime, 10)
         uid = int(uid, 10)
         gid = int(gid, 10)
@@ -41,18 +53,18 @@ class ArInfo(object):
         return cls(name, size, mtime, perms, uid, gid)
 
     def tobuffer(self):
-        if any(f is None for f in (self.name, self.mtime,
+        if any(f is None for f in (self._name, self.mtime,
                                    self.uid, self.gid, self.perms, self.size)):
             raise ValueError("ArInfo object has None fields")
         return (
             '{0: <16}{1: <12}{2: <6}{3: <6}{4: <8o}{5: <10}\x60\n'.format(
-                self.name,
+                self.name.decode('iso-8859-1'),
                 self.mtime, self.uid, self.gid, self.perms, self.size)
-            .encode('ascii'))
+            .encode('iso-8859-1'))
 
     def updatefromdisk(self, path=None):
         attrs = (
-            self.name, self.size, self.mtime, self.perms, self.uid, self.gid)
+            self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
         if not any(a is None for a in attrs):
             return self.__class__(*attrs)
 
@@ -61,7 +73,7 @@ class ArInfo(object):
             path = name
         stat = os.stat(path)
         if name is None:
-            name = path
+            name = utf8(path)
         if size is None:
             size = stat.st_size
         if mtime is None:
@@ -76,7 +88,7 @@ class ArInfo(object):
 
     def __copy__(self):
         member = self.__class__(
-            self.name, self.size, self.mtime, self.perms, self.uid, self.gid)
+            self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
         member.offset = self.offset
         return member
 
@@ -169,6 +181,8 @@ class ArFile(object):
         self._check('r')
         if isinstance(member, ArInfo):
             member = member.name
+        else:
+            member = utf8(member)
         index = self._name_map[member]
         return self._entries[index].__copy__()
 
@@ -193,10 +207,10 @@ class ArFile(object):
             if member.size > actualmember.size:
                 member.size = actualmember.size
         else:
-            index = self._name_map[member]
+            index = self._name_map[utf8(member)]
             member = self._entries[index]
         if not path or os.path.isdir(path):
-            path = os.path.join(path, member.name)
+            path = os.path.join(utf8(path), member.name)
         self._extract(member, path)
 
     def extractfile(self, member):
@@ -209,7 +223,7 @@ class ArFile(object):
         # multiple files with the same name, just the last one
         for index in self._name_map.values():
             member = self._entries[index]
-            self._extract(member, os.path.join(path, member.name))
+            self._extract(member, os.path.join(utf8(path), member.name))
 
     def close(self):
         if self._file is not None:

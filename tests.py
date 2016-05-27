@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import os
 import shutil
 import tempfile
@@ -119,7 +121,7 @@ class TestRead(_BaseTestInTempDir, unittest.TestCase):
             [(b'h.txt', 7, 1464380987, 0o100644, 501, 20, 8),
              (b'w.txt', 6, 1464380990, 0o100644, 501, 20, 8 + 60 + 8)])
 
-        info = archive.getinfo('w.txt')
+        info = archive.getinfo(b'w.txt')
         self.assertEqual(
             (info.name, info.size, info.mtime,
              info.perms, info.uid, info.gid, info.offset),
@@ -131,7 +133,7 @@ class TestRead(_BaseTestInTempDir, unittest.TestCase):
 
         os.mkdir('sub')
 
-        archive.extract('h.txt', 'sub')
+        archive.extract('h.txt', b'sub')
         with open('sub/h.txt', 'rb') as fp:
             self.assertEqual(fp.read(), b'hello,\n')
 
