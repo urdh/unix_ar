@@ -30,6 +30,7 @@ class ArInfo(object):
         # 58  2   File magic                      0x60 0x0A
         name, mtime, uid, gid, perms, size, magic = (
             struct.unpack('16s12s6s6s8s10s2s', buffer))
+        name = name.rstrip(b' ')
         mtime = int(mtime, 10)
         uid = int(uid, 10)
         gid = int(gid, 10)
@@ -111,7 +112,8 @@ class ArFile(object):
                 if skip % 2 != 0:
                     skip += 1
                 pos += 60 + skip
-                if pos == self._file.seek(skip, 1):
+                self._file.seek(skip, 1)
+                if pos == self._file.tell():
                     continue
             raise ValueError("Truncated archive?")
 
@@ -161,23 +163,53 @@ class ArFile(object):
 
     def infolist(self):
         self._check('r')
-        TODO
+        return list(i.__copy__() for i in self._entries)
 
     def getinfo(self, member):
         self._check('r')
-        TODO
+        if isinstance(member, ArInfo):
+            member = member.name
+        index = self._name_map[member]
+        return self._entries[index].__copy__()
+
+    def _extract(self, member, path):
+        self._file.seek(member.offset + 60, 0)
+        with _open(path, 'wb') as fp:
+            for pos in range(0, member.size, CHUNKSIZE):
+                chunk = self._file.read(min(CHUNKSIZE, member.size - pos))
+                fp.write(chunk)
 
     def extract(self, member, path=''):
         self._check('r')
-        TODO
+        if isinstance(member, ArInfo):
+            if member.offset is not None:
+                self._file.seek(member.offset, 0)
+                actualmember = ArInfo.frombuffer(self._file.read(60))
+            else:
+                index = self._name_map[member.name]
+                actualmember = self._entries[index]
+            if member.offset is None:
+                member.offset = actualmember.offset
+            if member.size > actualmember.size:
+                member.size = actualmember.size
+        else:
+            index = self._name_map[member]
+            member = self._entries[index]
+        if not path or os.path.isdir(path):
+            path = os.path.join(path, member.name)
+        self._extract(member, path)
 
     def extractfile(self, member):
         self._check('r')
-        TODO
+        raise NotImplementedError("extractfile() is not yet implemented")
 
     def extractall(self, path=''):
         self._check('r')
-        TODO
+        # Iterate on _name_map instead of plain _entries so we don't extract
+        # multiple files with the same name, just the last one
+        for index in self._name_map.values():
+            member = self._entries[index]
+            self._extract(member, os.path.join(path, member.name))
 
     def close(self):
         if self._file is not None:
