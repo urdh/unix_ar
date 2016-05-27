@@ -1,9 +1,13 @@
 import os
 import shutil
 import tempfile
-import unittest
 
 import unixar
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 
 class TestWrite(unittest.TestCase):

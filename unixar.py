@@ -46,7 +46,7 @@ class ArInfo(object):
             '{: <16}{: <12}{: <6}{: <6}{: <8o}{: <10}\x60\n'.format(
                 self.name,
                 self.mtime, self.uid, self.gid, self.perms, self.size)
-                .encode('ascii'))
+            .encode('ascii'))
 
     def updatefromdisk(self, path=None):
         attrs = (
