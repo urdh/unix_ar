@@ -43,7 +43,7 @@ class ArInfo(object):
                                    self.uid, self.gid, self.perms, self.size)):
             raise ValueError("ArInfo object has None fields")
         return (
-            '{: <16}{: <12}{: <6}{: <6}{: <8o}{: <10}\x60\n'.format(
+            '{0: <16}{1: <12}{2: <6}{3: <6}{4: <8o}{5: <10}\x60\n'.format(
                 self.name,
                 self.mtime, self.uid, self.gid, self.perms, self.size)
             .encode('ascii'))
