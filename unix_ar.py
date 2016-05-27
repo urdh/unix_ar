@@ -9,6 +9,12 @@ CHUNKSIZE = 4096
 
 
 def utf8(s):
+    """
+    Keeps bytes, converts unicode into UTF-8.
+
+    This is used for filenames, which the user may supply as unicode, but is
+    always stored as bytes in the archive.
+    """
     if isinstance(s, bytes):
         return s
     else:
@@ -16,6 +22,24 @@ def utf8(s):
 
 
 class ArInfo(object):
+    """
+    Information on a file in an archive.
+
+    This has the filename and all the metadata for a file in an archive.
+
+    It is returned by :meth:`~unix_ar.ArFile.infolist()` and
+    :meth:`~unix_ar.ArFile.getinfo()`, and can be passed when adding or
+    extracting a file to or from the archive.
+
+    Missing fields will be autocompleted when passed to `ArFile`, but note that
+    things like `size` will be respected, allowing you to store or extract only
+    part of a file.
+
+    `ArInfo` objects returned by `ArFile` have the offset to the file in the
+    archive, allowing to extract the correct one even if multiple files with
+    the same name are present; if you change the `name` attribute, the initial
+    file will be extracted with the new name (and new metadata).
+    """
     def __init__(self, name, size=None,
                  mtime=None, perms=None, uid=None, gid=None):
         self.name = name
@@ -33,6 +57,9 @@ class ArInfo(object):
 
     @classmethod
     def frombuffer(cls, buffer):
+        """
+        Decode the archive header.
+        """
         # 0   16  File name                       ASCII
         # 16  12  File modification timestamp     Decimal
         # 28  6   Owner ID                        Decimal
@@ -53,6 +80,9 @@ class ArInfo(object):
         return cls(name, size, mtime, perms, uid, gid)
 
     def tobuffer(self):
+        """
+        Encode as an archive header.
+        """
         if any(f is None for f in (self._name, self.mtime,
                                    self.uid, self.gid, self.perms, self.size)):
             raise ValueError("ArInfo object has None fields")
@@ -63,6 +93,16 @@ class ArInfo(object):
             .encode('iso-8859-1'))
 
     def updatefromdisk(self, path=None):
+        """
+        Fill in the missing attributes from an actual file.
+
+        This is called by `ArFile` when adding a file to the archive. If some
+        attributes are missing, they have to be provided from the disk.
+
+        If the file doesn't exist, adding will fail. There is currently no
+        default values for the attributes, it is thus your responsibility to
+        provide them.
+        """
         attrs = (
             self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
         if not any(a is None for a in attrs):
@@ -94,7 +134,17 @@ class ArInfo(object):
 
 
 class ArFile(object):
+    """
+    An UNIX ar archive.
+
+    This object allows you to either read or write an AR archive.
+    """
     def __init__(self, file, mode):
+        """
+        Create an `ArFile` from an opened file (in 'rb' or 'wb' mode).
+
+        Don't use this constructor, call :func:`unix_ar.open()` instead.
+        """
         self._file = file
         self._mode = mode
         if mode == 'r':
@@ -140,6 +190,15 @@ class ArFile(object):
                 raise ValueError("Can't read from a write-only archive")
 
     def add(self, name, arcname=None):
+        """
+        Add a file to the archive.
+
+        :param name: Path to the file to be added.
+        :type name: bytes | unicode
+        :param arcname: Name the file will be stored as in the archive, or
+            a full :class:`~unix_ar.ArInfo`. If unset, `name` will be used.
+        :type arcname: None | bytes | unicode | unix_ar.ArInfo
+        """
         self._check('w')
         if arcname is None:
             arcname = ArInfo(name)
@@ -150,6 +209,14 @@ class ArFile(object):
             self.addfile(arcname, fp)
 
     def addfile(self, name, fileobj=None):
+        """
+        Add a file to the archive from a file object.
+
+        :param name: Name the file will be stored as in the archive, or
+            a full :class:`~unix_ar.ArInfo`.
+        :type name: bytes | unicode | unix_ar.ArInfo
+        :param fileobj: File object to read from.
+        """
         self._check('w')
         if not isinstance(name, ArInfo):
             name = ArInfo(name)
@@ -174,10 +241,29 @@ class ArFile(object):
             fp.close()
 
     def infolist(self):
+        """
+        Return a list of :class:`~unix_ar.ArInfo` for files in the archive.
+
+        These objects are copy, so feel free to change them before feeding them
+        to :meth:`~unix_ar.ArFile.add()` or :meth:`~unix_ar.ArFile.addfile()`.
+
+        :rtype [unix_ar.ArInfo]
+        """
         self._check('r')
         return list(i.__copy__() for i in self._entries)
 
     def getinfo(self, member):
+        """
+        Return an :class:`~unix_ar.ArInfo` for a specific file.
+
+        This object is a copy, so feel free to change it before feeding them to
+        :meth:`~unix_ar.ArFile.add()` or :meth:`~unix_ar.ArFile.addfile()`.
+
+        :param member: Either a file name or an incomplete
+            :class:`unix_ar.ArInfo` object to search for.
+        :type member: bytes | unicode | unix_ar.ArInfo
+        :rtype: unix_ar.ArInfo
+        """
         self._check('r')
         if isinstance(member, ArInfo):
             if member.offset is not None:
@@ -198,6 +284,17 @@ class ArFile(object):
                 fp.write(chunk)
 
     def extract(self, member, path=''):
+        """
+        Extract a single file from the archive.
+
+        :param member: Either a file name or an :class:`unix_ar.ArInfo` object
+            to extract.
+        :type member: bytes | unicode | unix_ar.ArInfo
+        :param path: Destination path (current directory by default). You can
+            also change the `name` attribute on the `ArInfo` you pass this
+            method to extract to any file name.
+        :type path: bytes | unicode
+        """
         self._check('r')
         actualmember = self.getinfo(member)
         if isinstance(member, ArInfo):
@@ -216,6 +313,12 @@ class ArFile(object):
         raise NotImplementedError("extractfile() is not yet implemented")
 
     def extractall(self, path=''):
+        """
+        Extract all the files in the archive.
+
+        :param path: Destination path (current directory by default).
+        :type path: bytes | unicode
+        """
         self._check('r')
         # Iterate on _name_map instead of plain _entries so we don't extract
         # multiple files with the same name, just the last one
@@ -224,6 +327,11 @@ class ArFile(object):
             self._extract(member, os.path.join(utf8(path), member.name))
 
     def close(self):
+        """
+        Close this archive and the underlying file.
+
+        No method should be called on the object after this.
+        """
         if self._file is not None:
             self._file.close()
             self._file = None
@@ -232,6 +340,14 @@ class ArFile(object):
 
 
 def open(file, mode):
+    """
+    Open an archive file.
+
+    :param file: File name to open.
+    :type file: bytes | unicode
+    :param mode: Either ''r' or 'w'
+    :rtype: unix_ar.ArFile
+    """
     if hasattr(file, 'read'):
         return ArFile(file, mode)
     else:
