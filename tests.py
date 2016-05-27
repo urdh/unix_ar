@@ -43,6 +43,10 @@ class TestWrite(unittest.TestCase, _BaseTestInTempDir):
 
     def test_empty(self):
         archive = unixar.open('empty.ar', 'w')
+        with self.assertRaises(ValueError) as cm:
+            archive.infolist()
+        self.assertEqual(cm.exception.args[0],
+                         "Can't read from a write-only archive")
         archive.close()
 
         with open('empty.ar', 'rb') as fp:
@@ -67,10 +71,14 @@ class TestWrite(unittest.TestCase, _BaseTestInTempDir):
                 b'2222  100622  6         `\n'
                 b'world\n')
 
+        with self.assertRaises(ValueError) as cm:
+            archive.add('h.txt')
+        self.assertEqual(cm.exception.args[0],
+                         "Attempted to use a closed ArFile")
+
     def test_addfile(self):
         archive = unixar.open('addfile.ar', 'w')
-        with open('w.txt', 'rb') as fp:
-            archive.addfile(unixar.ArInfo('w.txt', size=4), fp)
+        archive.addfile(unixar.ArInfo('w.txt', size=4))
         with open('h.txt', 'rb') as fp:
             archive.addfile('w.txt', fp)
         archive.close()
@@ -101,6 +109,10 @@ class TestRead(_BaseTestInTempDir, unittest.TestCase):
                 b'world\n')
 
         archive = unixar.open('archive.ar', 'r')
+        with self.assertRaises(ValueError) as cm:
+            archive.add('/etc/passwd')
+        self.assertEqual(cm.exception.args[0],
+                         "Can't change a read-only archive")
         self.assertEqual(
             [(e.name, e.size, e.mtime, e.perms, e.uid, e.gid, e.offset)
              for e in archive.infolist()],
