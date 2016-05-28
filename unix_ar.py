@@ -180,11 +180,15 @@ class ArFile(object):
     def getinfo(self, member):
         self._check('r')
         if isinstance(member, ArInfo):
-            member = member.name
+            if member.offset is not None:
+                self._file.seek(member.offset, 0)
+                return ArInfo.frombuffer(self._file.read(60))
+            else:
+                index = self._name_map[member.name]
+                return self._entries[index].__copy__()
         else:
-            member = utf8(member)
-        index = self._name_map[member]
-        return self._entries[index].__copy__()
+            index = self._name_map[utf8(member)]
+            return self._entries[index].__copy__()
 
     def _extract(self, member, path):
         self._file.seek(member.offset + 60, 0)
@@ -195,20 +199,14 @@ class ArFile(object):
 
     def extract(self, member, path=''):
         self._check('r')
+        actualmember = self.getinfo(member)
         if isinstance(member, ArInfo):
-            if member.offset is not None:
-                self._file.seek(member.offset, 0)
-                actualmember = ArInfo.frombuffer(self._file.read(60))
-            else:
-                index = self._name_map[member.name]
-                actualmember = self._entries[index]
             if member.offset is None:
                 member.offset = actualmember.offset
             if member.size > actualmember.size:
                 member.size = actualmember.size
         else:
-            index = self._name_map[utf8(member)]
-            member = self._entries[index]
+            member = actualmember
         if not path or os.path.isdir(path):
             path = os.path.join(utf8(path), member.name)
         self._extract(member, path)
