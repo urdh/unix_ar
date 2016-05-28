@@ -2,6 +2,9 @@ import os
 import struct
 
 
+__version__ = '0.1'
+
+
 _open = open
 
 
