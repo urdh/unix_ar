@@ -1,5 +1,5 @@
-unixar
-======
+unix_ar
+=======
 
 This packages allows the reading and writing of `AR archive files <https://en.wikipedia.org/wiki/Ar_(Unix)>`__.
 

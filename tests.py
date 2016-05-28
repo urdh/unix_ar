@@ -4,7 +4,7 @@ import os
 import shutil
 import tempfile
 
-import unixar
+import unix_ar
 
 try:
     import unittest2 as unittest
@@ -15,7 +15,7 @@ except ImportError:
 class _BaseTestInTempDir(object):
     @classmethod
     def setUpClass(cls):
-        cls._dir = tempfile.mkdtemp(prefix='unixar_test_')
+        cls._dir = tempfile.mkdtemp(prefix='unix_ar_test_')
         os.chdir(cls._dir)
 
     @classmethod
@@ -44,7 +44,7 @@ class TestWrite(unittest.TestCase, _BaseTestInTempDir):
                                      value, expected, i))
 
     def test_empty(self):
-        archive = unixar.open('empty.ar', 'w')
+        archive = unix_ar.open('empty.ar', 'w')
         with self.assertRaises(ValueError) as cm:
             archive.infolist()
         self.assertEqual(cm.exception.args[0],
@@ -56,7 +56,7 @@ class TestWrite(unittest.TestCase, _BaseTestInTempDir):
                              b'!<arch>\n')
 
     def test_add(self):
-        archive = unixar.open('add.ar', 'w')
+        archive = unix_ar.open('add.ar', 'w')
         archive.add('h.txt', arcname='he')
         archive.add('w.txt')
         archive.close()
@@ -79,8 +79,8 @@ class TestWrite(unittest.TestCase, _BaseTestInTempDir):
                          "Attempted to use a closed ArFile")
 
     def test_addfile(self):
-        archive = unixar.open('addfile.ar', 'w')
-        archive.addfile(unixar.ArInfo('w.txt', size=4))
+        archive = unix_ar.open('addfile.ar', 'w')
+        archive.addfile(unix_ar.ArInfo('w.txt', size=4))
         with open('h.txt', 'rb') as fp:
             archive.addfile('w.txt', fp)
         archive.close()
@@ -110,7 +110,7 @@ class TestRead(_BaseTestInTempDir, unittest.TestCase):
                 b'20    100644  6         `\n'
                 b'world\n')
 
-        archive = unixar.open('archive.ar', 'r')
+        archive = unix_ar.open('archive.ar', 'r')
         with self.assertRaises(ValueError) as cm:
             archive.add('/etc/passwd')
         self.assertEqual(cm.exception.args[0],

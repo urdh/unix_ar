@@ -8,9 +8,9 @@ in
         python tests.py
         ;;
     check_style)
-        flake8 --ignore=E731 unixar.py setup.py tests.py
+        flake8 --ignore=E731 unix_ar.py setup.py tests.py
         ;;
     coverage)
-        coverage run --source=unixar.py --branch tests.py
+        coverage run --source=unix_ar.py --branch tests.py
         ;;
 esac
