@@ -227,6 +227,8 @@ class ArFile(object):
         if self._file is not None:
             self._file.close()
             self._file = None
+            self._entries = None
+            self._name_map = None
 
 
 def open(file, mode):
