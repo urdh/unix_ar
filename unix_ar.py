@@ -250,7 +250,7 @@ class ArFile(object):
         These objects are copy, so feel free to change them before feeding them
         to :meth:`~unix_ar.ArFile.add()` or :meth:`~unix_ar.ArFile.addfile()`.
 
-        :rtype [unix_ar.ArInfo]
+        :rtype: [unix_ar.ArInfo]
         """
         self._check('r')
         return list(i.__copy__() for i in self._entries)
