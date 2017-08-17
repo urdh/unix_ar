@@ -1,3 +1,8 @@
+Warning: *unmaintained*
+=======================
+
+I have lost interest in the AR file format and will therefore not be doing further development on this repository.
+
 unix_ar
 =======
 
