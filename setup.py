@@ -11,7 +11,7 @@ os.chdir(os.path.abspath(os.path.dirname(__file__)))
 with io.open('README.rst', encoding='utf-8') as fp:
     description = fp.read()
 setup(name='unix_ar',
-      version='0.1',
+      version='0.2',
       py_modules=['unix_ar'],
       description="AR file handling",
       author="Remi Rampin",
@@ -26,7 +26,6 @@ setup(name='unix_ar',
           'Development Status :: 3 - Alpha',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: BSD License',
-          'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 3',
           'Operating System :: OS Independent',
           'Topic :: System :: Archiving',

@@ -1,24 +1,27 @@
 os:
   - linux
-#  - osx
+  - osx
 language: python
 sudo: false
 env:
   - TEST_MODE=run_tests
 python:
-  - "2.6"
-  - "2.7"
   - "3.2"
   - "3.3"
   - "3.6"
+  - "3.7"
 install: .travis/install.sh
 script: .travis/test.sh
 after_success: .travis/finish.sh
 matrix:
   include:
     - os: linux
-      python: "2.7"
+      python: "3.6"
       env: TEST_MODE=check_style
     - os: linux
-      python: "2.7"
+      python: "3.6"
       env: TEST_MODE=coverage
+  allow_failures:
+    - os: osx
+    - python: "3.7"
+  fast_finish: true
