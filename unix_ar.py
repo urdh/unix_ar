@@ -1,4 +1,5 @@
 import os
+import io
 import struct
 
 
@@ -280,11 +281,18 @@ class ArFile(object):
             return self._entries[index].__copy__()
 
     def _extract(self, member, path):
+        if hasattr(path, 'write'):
+            fp = path
+        else:
+            fp = _open(path.rstrip(b'/'), 'wb')
+
         self._file.seek(member.offset + 60, 0)
-        with _open(path, 'wb') as fp:
-            for pos in range(0, member.size, CHUNKSIZE):
-                chunk = self._file.read(min(CHUNKSIZE, member.size - pos))
-                fp.write(chunk)
+        for pos in range(0, member.size, CHUNKSIZE):
+            chunk = self._file.read(min(CHUNKSIZE, member.size - pos))
+            fp.write(chunk)
+        fp.flush()
+        fp.seek(0)
+        return fp
 
     def extract(self, member, path=''):
         """
@@ -307,9 +315,10 @@ class ArFile(object):
                 member.size = actualmember.size
         else:
             member = actualmember
-        if not path or os.path.isdir(path):
-            path = os.path.join(utf8(path), member.name)
-        self._extract(member, path)
+        if not hasattr(path, 'write'):
+            if not path or os.path.isdir(path):
+                path = os.path.join(utf8(path), member.name)
+        return self._extract(member, path)
 
     def extractfile(self, member):
         self._check('r')
@@ -329,6 +338,11 @@ class ArFile(object):
             member = self._entries[index]
             self._extract(member, os.path.join(utf8(path), member.name))
 
+    def open(self, member: str) -> io.BytesIO:
+        filelike = self.extract(member, path=io.BytesIO())
+        filelike.name = member.strip('/')
+        return filelike
+
     def close(self):
         """
         Close this archive and the underlying file.
@@ -342,7 +356,7 @@ class ArFile(object):
             self._name_map = None
 
 
-def open(file, mode):
+def open(file, mode='r'):
     """
     Open an archive file.
 
@@ -354,9 +368,9 @@ def open(file, mode):
     if hasattr(file, 'read'):
         return ArFile(file, mode)
     else:
-        if mode == 'r':
+        if mode == 'r' or mode == 'rb':
             omode = 'rb'
-        elif mode == 'w':
+        elif mode == 'w' or mode == 'wb':
             omode = 'wb'
         else:
             raise ValueError("mode must be one of 'r' or 'w'")
