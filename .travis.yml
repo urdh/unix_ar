@@ -9,7 +9,7 @@ python:
   - "3.2"
   - "3.3"
   - "3.6"
-  # - "3.7"
+  - "3.7"
 install: .travis/install.sh
 script: .travis/test.sh
 after_success: .travis/finish.sh
@@ -21,3 +21,7 @@ matrix:
     - os: linux
       python: "3.6"
       env: TEST_MODE=coverage
+  allow_failures:
+    - os: osx
+    - python: "3.7"
+  fast_finish: true
