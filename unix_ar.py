@@ -356,7 +356,7 @@ class ArFile(object):
             self._name_map = None
 
 
-def open(file, mode):
+def open(file, mode='r'):
     """
     Open an archive file.
 
@@ -368,9 +368,9 @@ def open(file, mode):
     if hasattr(file, 'read'):
         return ArFile(file, mode)
     else:
-        if mode == 'r':
+        if mode == 'r' or mode == 'rb':
             omode = 'rb'
-        elif mode == 'w':
+        elif mode == 'w' or mode == 'wb':
             omode = 'wb'
         else:
             raise ValueError("mode must be one of 'r' or 'w'")
