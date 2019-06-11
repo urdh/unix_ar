@@ -2,12 +2,9 @@ import os
 import io
 import struct
 
-
-__version__ = '0.1'
-
+__version__ = '0.2'
 
 _open = open
-
 
 CHUNKSIZE = 4096
 
@@ -44,8 +41,8 @@ class ArInfo(object):
     the same name are present; if you change the `name` attribute, the initial
     file will be extracted with the new name (and new metadata).
     """
-    def __init__(self, name, size=None,
-                 mtime=None, perms=None, uid=None, gid=None):
+
+    def __init__(self, name, size=None, mtime=None, perms=None, uid=None, gid=None):
         self.name = name
         self.size = size
         self.mtime = mtime
@@ -54,10 +51,13 @@ class ArInfo(object):
         self.gid = gid
         self.offset = None
 
-    def _name_set(self, value):
-        self._name = utf8(value)
+    @property
+    def name(self):
+        return self._name
 
-    name = property(lambda self: self._name, _name_set)
+    @name.setter
+    def name(self, value):
+        self._name = utf8(value)
 
     @classmethod
     def frombuffer(cls, buffer):
@@ -71,8 +71,7 @@ class ArInfo(object):
         # 40  8   File mode                       Octal
         # 48  10  File size in bytes              Decimal
         # 58  2   File magic                      0x60 0x0A
-        name, mtime, uid, gid, perms, size, magic = (
-            struct.unpack('16s12s6s6s8s10s2s', buffer))
+        name, mtime, uid, gid, perms, size, magic = (struct.unpack('16s12s6s6s8s10s2s', buffer))
         name = utf8(name).rstrip(b' ')
         mtime = int(mtime, 10)
         uid = int(uid, 10)
@@ -87,14 +86,13 @@ class ArInfo(object):
         """
         Encode as an archive header.
         """
-        if any(f is None for f in (self._name, self.mtime,
-                                   self.uid, self.gid, self.perms, self.size)):
+        if any(f is None for f in (self._name, self.mtime, self.uid, self.gid, self.perms, self.size)):
             raise ValueError("ArInfo object has None fields")
         return (
             '{0: <16}{1: <12}{2: <6}{3: <6}{4: <8o}{5: <10}\x60\n'.format(
-                self.name.decode('iso-8859-1'),
-                self.mtime, self.uid, self.gid, self.perms, self.size)
-            .encode('iso-8859-1'))
+                self.name.decode('iso-8859-1'), self.mtime, self.uid, self.gid, self.perms, self.size
+            ).encode('iso-8859-1')
+        )
 
     def updatefromdisk(self, path=None):
         """
@@ -107,8 +105,7 @@ class ArInfo(object):
         default values for the attributes, it is thus your responsibility to
         provide them.
         """
-        attrs = (
-            self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
+        attrs = (self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
         if not any(a is None for a in attrs):
             return self.__class__(*attrs)
 
@@ -131,8 +128,7 @@ class ArInfo(object):
         return self.__class__(name, size, mtime, perms, uid, gid)
 
     def __copy__(self):
-        member = self.__class__(
-            self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
+        member = self.__class__(self._name, self.size, self.mtime, self.perms, self.uid, self.gid)
         member.offset = self.offset
         return member
 
@@ -143,7 +139,8 @@ class ArFile(object):
 
     This object allows you to either read or write an AR archive.
     """
-    def __init__(self, file, mode):
+
+    def __init__(self, file, mode='r'):
         """
         Create an `ArFile` from an opened file (in 'rb' or 'wb' mode).
 
@@ -185,8 +182,7 @@ class ArFile(object):
 
     def _check(self, expected_mode):
         if self._file is None:
-            raise ValueError("Attempted to use a closed %s" %
-                             self.__class__.__name__)
+            raise ValueError("Attempted to use a closed %s" % self.__class__.__name__)
         if self._mode != expected_mode:
             if self._mode == 'r':
                 raise ValueError("Can't change a read-only archive")
@@ -294,7 +290,7 @@ class ArFile(object):
         fp.seek(0)
         return fp
 
-    def extract(self, member, path=''):
+    def extract(self, member, path='') -> 'filelike':
         """
         Extract a single file from the archive.
 
