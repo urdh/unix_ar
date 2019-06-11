@@ -281,7 +281,7 @@ class ArFile(object):
 
     def _extract(self, member, path):
         self._file.seek(member.offset + 60, 0)
-        with _open(path, 'wb') as fp:
+        with _open(path.rstrip(b'/'), 'wb') as fp:
             for pos in range(0, member.size, CHUNKSIZE):
                 chunk = self._file.read(min(CHUNKSIZE, member.size - pos))
                 fp.write(chunk)
