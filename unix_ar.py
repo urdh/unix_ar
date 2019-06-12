@@ -2,7 +2,7 @@ import os
 import io
 import struct
 
-__version__ = '0.2'
+__version__ = '0.2.1'
 
 _open = open
 

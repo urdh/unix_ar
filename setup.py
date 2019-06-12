@@ -11,7 +11,7 @@ os.chdir(os.path.abspath(os.path.dirname(__file__)))
 with io.open('README.md', encoding='utf-8') as fp:
     description = fp.read()
 setup(name='unix_ar',
-      version='0.2',
+      version='0.2.1',
       py_modules=['unix_ar'],
       python_requires='~=3.6',
       description="AR file handling",
