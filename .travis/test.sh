@@ -8,7 +8,7 @@ in
         python tests.py
         ;;
     check_style)
-        flake8 --ignore=E731 unix_ar.py setup.py tests.py
+        flake8 unix_ar.py setup.py tests.py
         ;;
     coverage)
         coverage run --source=unix_ar.py --branch tests.py

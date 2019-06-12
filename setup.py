@@ -24,7 +24,7 @@ setup(name='unix_ar',
       long_description_content_type='text/markdown',
       license='BSD',
       keywords=['ar', 'archive', 'unix', 'deb'],
-      classifiers=[ # yapf: nolint
+      classifiers=[  # yapf: nolint
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: BSD License',
