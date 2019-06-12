@@ -1,8 +1,8 @@
 unix_ar
 =======
 
-[![PyPI version fury.io](https://badge.fury.io/py/unix_ar.svg)](https://pypi.python.org/pypi/unix_ar/)
-[![Build Status](https://travis-ci.org/getninjas/unix_ar.svg?branch=master)](https://travis-ci.org/getninjas/unix_ar)
+[![PyPI version](https://badge.fury.io/py/unix-ar.svg)](https://pypi.python.org/pypi/unix_ar/)
+[![Build Status](https://travis-ci.com/getninjas/unix_ar.svg?branch=master)](https://travis-ci.org/getninjas/unix_ar)
 [![Read The Docs](https://readthedocs.org/projects/unix_ar/badge/?version=latest)](https://unix_ar.readthedocs.io/en/latest/?badge=latest)
 
 
