@@ -375,6 +375,12 @@ class ArFile(object):
             self._entries = None
             self._name_map = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
 
 def open(file, mode='r'):
     """
