@@ -165,12 +165,20 @@ class ArFile(object):
         else:
             raise ValueError("mode must be one of 'r' or 'w'")
 
+    def _name_lookup(self, key):
+        start = try_parse_int(key.lstrip(b'/'), 10)
+        if start is not None:
+            end = self._lookup.find(b'\n', start)
+            return self._lookup[start:end]
+        return key
+
     def _read_entries(self):
         if self._file.read(8) != b'!<arch>\n':
             raise ValueError("Invalid archive signature")
 
         self._entries = []
         self._name_map = {}
+        self._lookup = b''
         pos = 8
         while True:
             buffer = self._file.read(60)
@@ -179,12 +187,18 @@ class ArFile(object):
             elif len(buffer) == 60:
                 member = ArInfo.frombuffer(buffer)
                 member.offset = pos
-                self._name_map[member.name] = len(self._entries)
-                self._entries.append(member)
-                skip = member.size
-                if skip % 2 != 0:
+                if member.name == b'//':
+                    self._lookup = self._file.read(member.size)
+                    skip = 0
+                else:
+                    member.name = self._name_lookup(member.name)
+                    self._name_map[member.name] = len(self._entries)
+                    self._entries.append(member)
+                    skip = member.size
+                pos += 60 + member.size
+                if member.size % 2 != 0:
                     skip += 1
-                pos += 60 + skip
+                    pos += 1
                 self._file.seek(skip, 1)
                 if pos == self._file.tell():
                     continue
