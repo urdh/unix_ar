@@ -9,6 +9,16 @@ _open = open
 CHUNKSIZE = 4096
 
 
+def try_parse_int(s, base=10, val=None):
+    """
+    Try to parse an integer, return `val` on failure.
+    """
+    try:
+        return int(s, base)
+    except ValueError:
+        return val
+
+
 def utf8(s):
     """
     Keeps bytes, converts unicode into UTF-8.
@@ -73,11 +83,11 @@ class ArInfo(object):
         # 58  2   File magic                      0x60 0x0A
         name, mtime, uid, gid, perms, size, magic = (struct.unpack('16s12s6s6s8s10s2s', buffer))
         name = utf8(name).rstrip(b' ')
-        mtime = int(mtime, 10)
-        uid = int(uid, 10)
-        gid = int(gid, 10)
-        perms = int(perms, 8)
-        size = int(size, 10)
+        mtime = try_parse_int(mtime, 10)
+        uid = try_parse_int(uid, 10)
+        gid = try_parse_int(gid, 10)
+        perms = try_parse_int(perms, 8)
+        size = try_parse_int(size, 10)
         if magic != b'\x60\n':
             raise ValueError("Invalid file signature")
         return cls(name, size, mtime, perms, uid, gid)
