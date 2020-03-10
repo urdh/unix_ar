@@ -153,6 +153,40 @@ class TestRead(_BaseTestInTempDir, unittest.TestCase):
 
         archive.close()
 
+    def test_systemv(self):
+        with open('systemv.ar', 'wb') as fp:
+            fp.write(
+                b'!<arch>\n'
+                b'//                                '
+                b'              20        `\n'
+                b'file_a.o/\nfile_b.o/\n'
+                b'/0              1464380990  501   '
+                b'20    100644  16        `\n'
+                b'this is file_a.o'
+                b'/10             1464380990  501   '
+                b'20    100644  16        `\n'
+                b'this is file_b.o'
+                b'file_c.o/       1464380990  501   '
+                b'20    100644  16        `\n'
+                b'this is file_c.o'
+            )
+
+        with unix_ar.open('systemv.ar', 'r') as archive:
+            self.assertEqual(
+                [(e.name, e.size, e.mtime, e.perms, e.uid, e.gid, e.offset)
+                 for e in archive.infolist()],
+                [(b'file_a.o/', 16, 1464380990, 0o100644, 501, 20, 88),
+                 (b'file_b.o/', 16, 1464380990, 0o100644, 501, 20, 164),
+                 (b'file_c.o/', 16, 1464380990, 0o100644, 501, 20, 240)])
+
+            archive.extractall('all')
+            with open('all/file_a.o', 'rb') as fp:
+                self.assertEqual(fp.read(), b'this is file_a.o')
+            with open('all/file_b.o', 'rb') as fp:
+                self.assertEqual(fp.read(), b'this is file_b.o')
+            with open('all/file_c.o', 'rb') as fp:
+                self.assertEqual(fp.read(), b'this is file_c.o')
+
 
 if __name__ == '__main__':
     unittest.main()
